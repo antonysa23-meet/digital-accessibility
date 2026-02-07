@@ -1,0 +1,217 @@
+{
+  "version": "2.0",
+  "categories": [
+    {
+      "name": "Contrast and Color Blindness",
+      "id": "contrast_color",
+      "type": "text",
+      "guidance": "Use High Contrast: Choose text colors that stand out clearly from the background. This helps people with low vision read the content easily. You can check contrast using online tools like WebAIM's Color Contrast Checker or TPGi's Colour Contrast Analyzer.\nCommon Color Blindness: Red/Green, Blue/Yellow. If those colors are used, there should also be words or different patterns to distinguish in a way other than color.\nAvoid Italics for Large Text Blocks: Italics can be harder to read on screens. Use bold or color to highlight key points instead.\nUse Colors Thoughtfully: Avoid overly bright colors or text-background combinations that make reading difficult."
+    },
+    {
+      "name": "Text Readability",
+      "id": "text_readability",
+      "type": "text",
+      "guidance": "Choose the Right Font and Size: Text should use simple, easy-to-read fonts large enough to read from a reasonable distance. If people are walking by quickly, they should still be able to catch the message.\nKeep it Simple: Use clear and straightforward language. Short sentences and simple words make content easier to understand that can be read within 15 seconds.\nStick to Simple Fonts: Use one or two easy-to-read typefaces. Avoid fancy or decorative fonts like Comic Sans or handwriting styles.\nGive Text Room to Breathe: Don't cram too much text into one slide. Leave space around text and images for clarity.\nAvoid long website URLs that are hard to remember.\nUse simple, recognizable links or QR codes that are large enough to easily scan to direct people to more information."
+    },
+    {
+      "name": "Image Clarity, Sizing, Lack of Clutter",
+      "id": "image_clarity",
+      "type": "text",
+      "guidance": "Use Graphics Wisely: Supplement text with simple, clear images that reinforce the message. Avoid overly complex designs. Size appropriately, and ensure they are clear.\nUse Properly Licensed Content: Do not use copyrighted images or logos without permission.\nFollow Brand Guidelines: Use official brand resources to ensure your department or organization is recognizable.\nUse Authentic Images: Avoid generic stock photos that don't reflect the real audience or environment."
+    },
+    {
+      "name": "Interactive Display",
+      "id": "interactive_display",
+      "type": "text",
+      "guidance": "Is there an interactive display? If so, please also note location and owner.\nButtons should be between 36-42 inches above the floor.\nTouch elements should be reachable within a 10-inch range.\nWayfinding signs (for navigation) should include accessible routes to all listed destinations."
+    }
+  ],
+  "overall_rating": {
+    "id": "accessibility_rating",
+    "label": "How would you assess the digital accessibility of this location?",
+    "type": "select",
+    "options": [
+      "Fully Accessible",
+      "Mostly Accessible",
+      "Partially Accessible",
+      "Mostly Inaccessible",
+      "Fully Inaccessible",
+      "N/A - No Active Displays"
+    ]
+  },
+  "final_comments": {
+    "id": "final_comments",
+    "label": "Other Final Comments",
+    "type": "text"
+  },
+  "metadata_fields": [
+    {
+      "id": "assessor_name",
+      "label": "Name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "evaluation_team",
+      "label": "Evaluation Team",
+      "type": "text",
+      "required": false
+    },  
+    {
+      "id": "assessor_email",
+      "label": "Email Address",
+      "type": "email",
+      "required": true
+    },
+    {
+      "id": "building",
+      "label": "Which building did you survey?",
+      "type": "select",
+      "required": true,
+      "options": [
+        "Herman Brown Hall",
+        "COB (Continuing Studies Building)",
+        "Allen Center",
+        "O'Connor Engineering",
+        "Maxfield Hall",
+        "Cox (Mechanical Engineering)",
+        "Space Science",
+        "Duncan Hall",
+        "GRB (George R. Brown Hall)",
+        "Student Center",
+        "Rec Center",
+        "Business School (McNair Hall)",
+        "Sewall Hall Welcome Center",
+        "Rayzor Hall",
+        "Huma (Humanities Building)",
+        "Sarofim Hall",
+        "Fondren Library",
+        "Kraft Hall",
+        "Athletics",
+        "RUPD",
+        "Anderson Clarke (Continuing Studies)",
+        "Music School (Alice Pratt Brown Hall)",
+        "Baker Institute",
+        "BRC (BioScience Research Collaborative)",
+        "iON",
+        "Will Rice College",
+        "Hanszen College",
+        "Sid Richardson College",
+        "Other College",
+        "Housing & Dining",
+        "Other"
+      ]
+    },
+    {
+      "id": "screen_location",
+      "label": "Screen Location",
+      "type": "dependent_select",
+      "depends_on": "building",
+      "required": true,
+      "options_map": {
+        "Herman Brown Hall": ["Main Office Area"],
+        "COB (Continuing Studies Building)": ["Front Lobby", "2nd Floor Elevator Lobby", "3rd Floor Elevator Lobby", "4th Floor Elevator Lobby", "5th Floor Elevator Lobby", "6th Floor Elevator Lobby"],
+        "Allen Center": ["Front Lobby"],
+        "O'Connor Engineering": ["Front Lobby"],
+        "Maxfield Hall": ["Front Lobby"],
+        "Cox (Mechanical Engineering)": ["Front Lobby"],
+        "Space Science": ["1st Floor Outside", "2nd Floor Elevator Lobby", "3rd Floor Elevator Lobby"],
+        "Duncan Hall": ["Martel Hall Lobby", "Dean Of Engineering Lobby"],
+        "GRB (George R. Brown Hall)": ["Dean Of Natural Science Lobby"],
+        "Student Center": ["Location 1", "Location 2", "Location 3", "Other"],
+        "Rec Center": ["Location 1", "Location 2", "Location 3", "Other"],
+        "Business School (McNair Hall)": ["Location 1", "Location 2", "Location 3", "Other"],
+        "Sewall Hall Welcome Center": ["Screen 1", "Screen 2"],
+        "Rayzor Hall": ["Lobby"],
+        "Huma (Humanities Building)": ["Main Area", "Other"],
+        "Sarofim Hall": ["Main Area", "Other"],
+        "Fondren Library": ["Location 1", "Location 2", "Location 3", "Other"],
+        "Kraft Hall": ["Welcome Center Lobby"],
+        "Athletics": ["R-Room Screen 1", "R-Room Screen 2"],
+        "RUPD": ["Front Lobby"],
+        "Anderson Clarke (Continuing Studies)": ["Front Lobby", "Main Lobby", "Auditorium", "2nd Floor Lobby"],
+        "Music School (Alice Pratt Brown Hall)": ["Grand Foyer", "Brockman Hall Theater Level 1", "Brockman Hall Theater Level 2", "Brockman Hall Theater Level 3", "Brockman Hall Theater Level 4"],
+        "Baker Institute": ["No Active Displays"],
+        "BRC (BioScience Research Collaborative)": ["Location 1", "Location 2", "Location 3", "Other"],
+        "iON": ["Rice Staff Lobby"],
+        "Will Rice College": ["Commons"],
+        "Hanszen College": ["Commons", "New Wing Lobby"],
+        "Sid Richardson College": ["Commons", "Lobby Screen 1", "Lobby Screen 2"],
+        "Other College": ["Commons", "Lobby", "Other"],
+        "Housing & Dining": ["Location 1", "Location 2", "Location 3", "Other"],
+        "Other": ["Other"]
+      }
+    },
+    {
+      "id": "reviewed_on",
+      "label": "Reviewed On",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "floor_owner",
+      "label": "Floor Owner / Content Creator",
+      "type": "auto",
+      "required": false,
+      "lookup_from": "owner_map",
+      "lookup_key": "building"
+    }
+  ],
+  "owner_map": {
+    "Herman Brown Hall": "Lisa Geda",
+    "COB (Continuing Studies Building)": "Armi Cahoy - Lobby-4th, DAR 5&6",
+    "Allen Center": "100% Public Affairs",
+    "O'Connor Engineering": "100% Building Mgmt",
+    "Maxfield Hall": "100% Statistics",
+    "Cox (Mechanical Engineering)": "100% Mech Eng",
+    "Space Science": "90% Chemistry / 10% Engineering",
+    "Duncan Hall": "100% Engineering",
+    "GRB (George R. Brown Hall)": "100% Natural Sciences",
+    "Student Center": "100% Student Center",
+    "Rec Center": "100% Rec Center",
+    "Business School (McNair Hall)": "100% Business School",
+    "Sewall Hall Welcome Center": "100% Public Affairs",
+    "Rayzor Hall": "100% Local To Building",
+    "Huma (Humanities Building)": "100% Humanities",
+    "Sarofim Hall": "100% Humanities",
+    "Fondren Library": "Jeff Koffler",
+    "Kraft Hall": "100% Dean Of Social Sciences",
+    "Athletics": "100% Athletics",
+    "RUPD": "100% RUPD",
+    "Anderson Clarke (Continuing Studies)": "100% Continuing Studies",
+    "Music School (Alice Pratt Brown Hall)": "Katie Sejba <ks163@rice.edu>",
+    "Baker Institute": "Ben Stevenson",
+    "BRC (BioScience Research Collaborative)": "100% BRC",
+    "iON": "Unknown",
+    "Will Rice College": "College",
+    "Hanszen College": "College",
+    "Sid Richardson College": "College",
+    "Other College": "College",
+    "Housing & Dining": "Tony Hok",
+    "Other": ""
+  },
+  "ai_inferred_fields": [
+    {
+      "id": "sign_type",
+      "label": "Sign Type",
+      "type": "select",
+      "options": [
+        "Static Display",
+        "Interactive Touchscreen",
+        "Wayfinding/Directory",
+        "Event Board",
+        "Menu Board",
+        "Other"
+      ]
+    },
+    {
+      "id": "orientation",
+      "label": "Orientation",
+      "type": "select",
+      "options": [
+        "Landscape",
+        "Portrait"
+      ]
+    }
+  ]
+}

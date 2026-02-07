@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signage Accessibility Checker</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Signage Accessibility Checker</h1>
+        <p class="subtitle">Rice University &mdash; Section 504 Digital Display Assessment</p>
+    </header>
+
+    <main>
+        <!-- Progress Steps -->
+        <nav class="steps" aria-label="Assessment progress">
+            <ol>
+                <li id="step-indicator-1" class="step active" aria-current="step">
+                    <span class="step-number">1</span>
+                    <span class="step-label">Details</span>
+                </li>
+                <li id="step-indicator-2" class="step">
+                    <span class="step-number">2</span>
+                    <span class="step-label">Photo</span>
+                </li>
+                <li id="step-indicator-3" class="step">
+                    <span class="step-number">3</span>
+                    <span class="step-label">Review</span>
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Step 1: Metadata -->
+        <section id="step-1" class="step-content active" aria-labelledby="step-indicator-1">
+            <h2>Sign Details</h2>
+            <p>Enter information about the sign you are assessing.</p>
+            <form id="metadata-form" novalidate>
+                <div id="metadata-fields">
+                    <!-- Dynamically populated from questions.json -->
+                </div>
+                <button type="submit" class="btn btn-primary">Next: Take Photo</button>
+            </form>
+        </section>
+
+        <!-- Step 2: Photo Upload -->
+        <section id="step-2" class="step-content" aria-labelledby="step-indicator-2">
+            <h2>Capture Sign Photo</h2>
+            <p>Take a photo of the digital sign from a distance where the entire sign is visible.</p>
+
+            <div class="upload-area" id="upload-area">
+                <div id="upload-placeholder">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <p>Tap to take a photo or select from gallery</p>
+                </div>
+                <img id="preview-image" class="preview-image hidden" alt="Preview of uploaded sign photo">
+                <input type="file" id="photo-input" accept="image/*" capture="environment" aria-label="Take or select a photo of the sign">
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" id="back-to-step-1">Back</button>
+                <button type="button" class="btn btn-primary" id="analyze-btn" disabled>Analyze Sign</button>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <section id="loading" class="step-content" aria-live="polite">
+            <div class="loading-container">
+                <div class="spinner" aria-hidden="true"></div>
+                <h2>Analyzing Sign...</h2>
+                <p>Claude is evaluating the sign against accessibility criteria. This may take a few seconds.</p>
+            </div>
+        </section>
+
+        <!-- Step 3: Review & Submit -->
+        <section id="step-3" class="step-content" aria-labelledby="step-indicator-3">
+            <h2>Review Assessment</h2>
+            <p>Review the AI assessment below. You can edit any answers before submitting.</p>
+
+            <!-- AI-inferred metadata -->
+            <div id="inferred-metadata" class="card hidden">
+                <h3>AI-Inferred Details</h3>
+                <div id="inferred-fields"></div>
+            </div>
+
+            <!-- Assessment results by category -->
+            <div id="assessment-results"></div>
+
+            <!-- Overall notes -->
+            <div class="card" id="overall-notes-card" style="display:none;">
+                <h3>Additional Observations</h3>
+                <p id="overall-notes-text"></p>
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" id="back-to-step-2">Back to Photo</button>
+                <button type="button" class="btn btn-primary" id="submit-btn">Submit to Google Sheet</button>
+            </div>
+        </section>
+
+        <!-- Success State -->
+        <section id="success" class="step-content">
+            <div class="success-container">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 12l2.5 2.5L16 9"/>
+                </svg>
+                <h2>Assessment Submitted</h2>
+                <p>The results have been saved to the Google Sheet.</p>
+                <button type="button" class="btn btn-primary" id="new-assessment-btn">Assess Next Sign</button>
+            </div>
+        </section>
+
+        <!-- Error State -->
+        <div id="error-banner" class="error-banner hidden" role="alert">
+            <p id="error-message"></p>
+            <button type="button" class="btn-close" id="dismiss-error" aria-label="Dismiss error">&times;</button>
+        </div>
+    </main>
+
+    <footer>
+        <p>Rice University Digital Accessibility &mdash; Section 504 Compliance</p>
+    </footer>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

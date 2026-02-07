@@ -1,0 +1,30 @@
+# Environment variables (contains secrets)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+nul
+
+# Temp files
+*.tmp
+cUsersantonAppDataLocalTempconfig_test.json
+
+# Reference files (saved web pages)
+Creating Accessible Communications _ Digital Accessibility _ Rice University.html
+Creating Accessible Communications _ Digital Accessibility _ Rice University_files/
+
+# Unused
+main.py

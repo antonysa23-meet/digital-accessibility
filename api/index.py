@@ -1,0 +1,392 @@
+import os
+import json
+import base64
+import io
+import re
+from datetime import datetime, timezone
+
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'),
+    static_folder=os.path.join(os.path.dirname(__file__), '..', 'static'),
+)
+
+# ===== Config Loading =====
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'questions.json')
+
+
+def load_config():
+    with open(CONFIG_PATH, 'r') as f:
+        return json.load(f)
+
+
+# ===== Google Auth Helper =====
+def get_google_credentials():
+    """Decode base64-encoded service account JSON from env var."""
+    creds_b64 = os.environ.get('GOOGLE_SHEETS_CREDS', '')
+    if not creds_b64:
+        raise ValueError('GOOGLE_SHEETS_CREDS environment variable is not set')
+
+    creds_json = base64.b64decode(creds_b64).decode('utf-8')
+    creds_info = json.loads(creds_json)
+
+    from google.oauth2.service_account import Credentials
+    scopes = [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive.file',
+    ]
+    return Credentials.from_service_account_info(creds_info, scopes=scopes)
+
+
+# ===== Routes =====
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
+
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Return the questions config to the frontend."""
+    config = load_config()
+    return jsonify(config)
+
+
+@app.route('/api/assess', methods=['POST'])
+def assess():
+    """Receive an image and metadata, analyze with Claude, return structured JSON."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    image_b64 = data.get('image')
+    media_type = data.get('media_type', 'image/jpeg')
+    metadata = data.get('metadata', {})
+
+    if not image_b64:
+        return jsonify({'error': 'No image provided'}), 400
+
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'ANTHROPIC_API_KEY is not configured'}), 500
+
+    # Load config and build prompt
+    config = load_config()
+    prompt = build_assessment_prompt(config, metadata)
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        message = client.messages.create(
+            model='claude-sonnet-4-5-20250929',
+            max_tokens=4096,
+            messages=[
+                {
+                    'role': 'user',
+                    'content': [
+                        {
+                            'type': 'image',
+                            'source': {
+                                'type': 'base64',
+                                'media_type': media_type,
+                                'data': image_b64,
+                            },
+                        },
+                        {
+                            'type': 'text',
+                            'text': prompt,
+                        },
+                    ],
+                }
+            ],
+        )
+
+        # Extract text response
+        response_text = message.content[0].text
+
+        # Parse JSON from the response (handle markdown code fences)
+        result = parse_json_response(response_text)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': f'AI analysis failed: {str(e)}'}), 500
+
+
+@app.route('/api/submit', methods=['POST'])
+def submit():
+    """Submit assessment results to Google Sheet and upload image to Google Drive."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    metadata = data.get('metadata', {})
+    assessments = data.get('assessments', {})
+    inferred_metadata = data.get('inferred_metadata', {})
+    accessibility_rating = data.get('accessibility_rating', '')
+    final_comments = data.get('final_comments', '')
+    overall_notes = data.get('overall_notes', '')
+    image_b64 = data.get('image', '')
+    media_type = data.get('media_type', 'image/jpeg')
+
+    sheet_id = os.environ.get('GOOGLE_SHEET_ID', '')
+    drive_folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID', '')
+
+    if not sheet_id:
+        return jsonify({'error': 'GOOGLE_SHEET_ID is not configured'}), 500
+
+    try:
+        creds = get_google_credentials()
+
+        # Upload image to Google Drive
+        image_link = ''
+        if image_b64 and drive_folder_id:
+            image_link = upload_to_drive(creds, image_b64, media_type, metadata, drive_folder_id)
+
+        # Append to Google Sheet
+        append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
+                        accessibility_rating, final_comments, overall_notes, image_link)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'error': f'Submission failed: {str(e)}'}), 500
+
+
+# ===== Helpers =====
+
+def build_assessment_prompt(config, metadata):
+    """Build the Claude prompt from the questions config."""
+    metadata_context = ''
+    if metadata:
+        metadata_context = '\nUser-provided context about this sign:\n'
+        for key, value in metadata.items():
+            if value:
+                metadata_context += f'- {key}: {value}\n'
+
+    # Build AI-inferred fields instructions
+    ai_fields = config.get('ai_inferred_fields', [])
+    ai_fields_instructions = ''
+    ai_fields_schema = ''
+    for field in ai_fields:
+        options = field.get('options', [])
+        options_str = ', '.join(f'"{o}"' for o in options)
+        ai_fields_instructions += f'- **{field["id"]}**: {field["label"]}. Must be one of: {options_str}\n'
+        ai_fields_schema += f'    "{field["id"]}": "one of: {", ".join(options)}",\n'
+
+    # Build category assessment instructions
+    categories_text = ''
+    category_ids = []
+    for category in config.get('categories', []):
+        categories_text += f'\n### {category["name"]} (id: "{category["id"]}")\n'
+        if category.get('guidance'):
+            categories_text += f'Evaluation criteria:\n{category["guidance"]}\n'
+        category_ids.append(category['id'])
+
+    # Build overall rating options
+    rating_config = config.get('overall_rating', {})
+    rating_options = rating_config.get('options', [])
+    rating_options_str = ', '.join(f'"{o}"' for o in rating_options)
+
+    prompt = f"""You are an accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards.
+{metadata_context}
+Analyze the attached photo of a digital sign and provide a detailed assessment for each category below.
+
+For each category, write a 2-4 sentence assessment paragraph that:
+- Describes what you observe on the sign relevant to that category
+- Notes any accessibility concerns or strengths
+- References specific elements visible in the image
+
+Important assessment guidelines:
+- For **Contrast and Color Blindness**: Check if text stands out clearly from background. Note if red/green or blue/yellow color combinations are used without alternative indicators (text labels, patterns). Estimate the contrast ratio if possible (WCAG 2.1 requires 4.5:1 for normal text, 3:1 for large text). Note if italics are used for large blocks of text.
+- For **Text Readability**: Check font size, simplicity, whitespace, and whether content can be read within ~15 seconds. Note if long URLs appear without QR codes. Check for decorative/hard-to-read fonts.
+- For **Image Clarity**: Check if images are clear, appropriately sized, and not cluttered. Note if stock photos are used vs authentic images. Check for brand guideline compliance.
+- For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
+- If the sign appears to be **off, blank, or not displaying content**, note this clearly.
+
+Also determine the following from the image:
+{ai_fields_instructions}- Any visible building or location identifiers
+- Any other relevant contextual details
+
+Based on your assessment, suggest an overall accessibility rating. Must be one of: {rating_options_str}
+
+Return your response as valid JSON matching this exact schema. Do NOT wrap it in markdown code fences.
+
+{{
+  "inferred_metadata": {{
+{ai_fields_schema}    "building": "building name if visible, or null",
+    "additional_context": "any other observations"
+  }},
+  "assessments": {{
+{chr(10).join(f'    "{cid}": "Your 2-4 sentence assessment paragraph...",' for cid in category_ids)}
+  }},
+  "accessibility_rating": "one of: {', '.join(rating_options)}",
+  "final_comments": "Any additional accessibility observations not covered by the categories above",
+  "overall_notes": "Extra context about the sign environment, placement, or other relevant details"
+}}
+
+Categories to evaluate:
+{categories_text}"""
+
+    return prompt
+
+
+def parse_json_response(text):
+    """Parse JSON from Claude's response, handling markdown code fences."""
+    # Try to extract JSON from code fences
+    fence_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+    if fence_match:
+        text = fence_match.group(1)
+
+    # Try to find JSON object
+    brace_start = text.find('{')
+    if brace_start != -1:
+        # Find the matching closing brace
+        depth = 0
+        for i in range(brace_start, len(text)):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    text = text[brace_start:i + 1]
+                    break
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Return a fallback structure
+        return {
+            'inferred_metadata': {},
+            'assessments': {},
+            'overall_notes': f'Failed to parse AI response. Raw response: {text[:500]}',
+        }
+
+
+def upload_to_drive(creds, image_b64, media_type, metadata, folder_id):
+    """Upload image to Google Drive and return a shareable link."""
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseUpload
+
+    service = build('drive', 'v3', credentials=creds)
+
+    # Build filename
+    building = metadata.get('building', 'unknown').replace(' ', '_')
+    location = metadata.get('screen_location', '').replace(' ', '_')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    filename = f'{building}_{location}_{timestamp}.jpg'
+
+    # Decode image
+    image_bytes = base64.b64decode(image_b64)
+    media = MediaIoBaseUpload(io.BytesIO(image_bytes), mimetype=media_type)
+
+    file_metadata = {
+        'name': filename,
+        'parents': [folder_id],
+    }
+
+    file = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields='id, webViewLink',
+    ).execute()
+
+    # Make viewable by anyone with link
+    service.permissions().create(
+        fileId=file['id'],
+        body={'type': 'anyone', 'role': 'reader'},
+    ).execute()
+
+    return file.get('webViewLink', '')
+
+
+def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
+                    accessibility_rating, final_comments, overall_notes, image_link):
+    """Append one row of assessment results to the Google Sheet."""
+    import gspread
+
+    gc = gspread.authorize(creds)
+    sheet = gc.open_by_key(sheet_id).sheet1
+
+    config = load_config()
+
+    # Build header row if sheet is empty
+    existing = sheet.get_all_values()
+    if not existing:
+        headers = build_header_row(config)
+        sheet.append_row(headers, value_input_option='USER_ENTERED')
+
+    # Build data row
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    row = [timestamp]
+
+    # Metadata columns (user-entered + auto-populated like floor_owner)
+    for field in config.get('metadata_fields', []):
+        row.append(metadata.get(field['id'], ''))
+
+    # AI-inferred fields (sign_type, orientation, etc.)
+    for field in config.get('ai_inferred_fields', []):
+        row.append(inferred_metadata.get(field['id'], ''))
+
+    # Image link
+    row.append(image_link)
+
+    # Assessment columns (one text column per category)
+    for category in config.get('categories', []):
+        row.append(assessments.get(category['id'], ''))
+
+    # Accessibility rating
+    row.append(accessibility_rating)
+
+    # Final comments
+    row.append(final_comments)
+
+    # Overall notes
+    row.append(overall_notes)
+
+    # Extra inferred context (building, additional_context — anything not in ai_inferred_fields)
+    ai_field_ids = {f['id'] for f in config.get('ai_inferred_fields', [])}
+    extra_inferred = ', '.join(
+        f'{k}: {v}' for k, v in inferred_metadata.items() if v and k not in ai_field_ids
+    )
+    row.append(extra_inferred)
+
+    sheet.append_row(row, value_input_option='USER_ENTERED')
+
+
+def build_header_row(config):
+    """Build the header row for the Google Sheet based on the config."""
+    headers = ['Timestamp']
+
+    for field in config.get('metadata_fields', []):
+        headers.append(field['label'])
+
+    for field in config.get('ai_inferred_fields', []):
+        headers.append(field['label'])
+
+    headers.append('Image Link')
+
+    for category in config.get('categories', []):
+        headers.append(category['name'])
+
+    headers.append('Accessibility Rating')
+    headers.append('Final Comments')
+    headers.append('Overall Notes')
+    headers.append('AI Additional Context')
+
+    return headers
+
+
+# ===== Local Dev =====
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
