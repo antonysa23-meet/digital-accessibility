@@ -33,8 +33,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listeners
     document.getElementById('metadata-form').addEventListener('submit', onMetadataSubmit);
     document.getElementById('photo-input').addEventListener('change', onPhotoSelected);
-    document.getElementById('upload-area').addEventListener('click', () => {
-        document.getElementById('photo-input').click();
+    document.getElementById('upload-area').addEventListener('click', (e) => {
+        if (e.target.id !== 'photo-input') {
+            document.getElementById('photo-input').click();
+        }
     });
     document.getElementById('analyze-btn').addEventListener('click', onAnalyze);
     document.getElementById('back-to-step-1').addEventListener('click', () => goToStep(1));
