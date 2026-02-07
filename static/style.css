@@ -230,6 +230,32 @@ main {
     display: block;
 }
 
+/* ===== Photo Instructions ===== */
+.photo-instructions {
+    background-color: var(--color-bg);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1rem 1rem 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+}
+
+.photo-instructions p {
+    margin-bottom: 0.5rem;
+}
+
+.photo-instructions ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.photo-instructions li {
+    margin-bottom: 0.375rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
 /* ===== Upload Area ===== */
 .upload-area {
     border: 3px dashed var(--color-border);
