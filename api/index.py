@@ -3,10 +3,14 @@ import json
 import base64
 import io
 import re
+import logging
 from datetime import datetime, timezone
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from dotenv import load_dotenv
+
+# Suppress file_cache warning from google-api-python-client
+logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 load_dotenv()
 
@@ -160,7 +164,9 @@ def submit():
         return jsonify({'success': True})
 
     except Exception as e:
-        return jsonify({'error': f'Submission failed: {str(e)}'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 # ===== Helpers =====
@@ -198,27 +204,36 @@ def build_assessment_prompt(config, metadata):
     rating_options = rating_config.get('options', [])
     rating_options_str = ', '.join(f'"{o}"' for o in rating_options)
 
-    prompt = f"""You are an accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards.
+    prompt = f"""You are a strict, detail-oriented accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards. You have high standards and err on the side of flagging issues rather than giving the benefit of the doubt.
+
+IMPORTANT RATING PHILOSOPHY:
+- Be critical and thorough. Most signs have accessibility issues — a "Fully Accessible" rating should be rare.
+- Do NOT default to positive assessments. If something is borderline, flag it as a concern.
+- Even signs that look "good enough" often fail specific WCAG criteria on closer inspection.
+- A sign must excel in ALL categories to receive a top rating. A single significant issue should pull the overall rating down.
+- "Mostly Accessible" should be the ceiling for signs with any notable concern. "Partially Accessible" or lower is appropriate when multiple issues exist.
+- Small text, low contrast, cluttered layouts, missing QR codes for URLs, and poor color choices are all common issues that should be called out specifically.
 {metadata_context}
-Analyze the attached photo of a digital sign and provide a detailed assessment for each category below.
+Analyze the attached photo of a digital sign and provide a detailed, critical assessment for each category below.
 
 For each category, write a 2-4 sentence assessment paragraph that:
 - Describes what you observe on the sign relevant to that category
-- Notes any accessibility concerns or strengths
+- Explicitly identifies any accessibility concerns, even minor ones
 - References specific elements visible in the image
+- Does NOT gloss over issues or use overly positive language
 
 Important assessment guidelines:
-- For **Contrast and Color Blindness**: Check if text stands out clearly from background. Note if red/green or blue/yellow color combinations are used without alternative indicators (text labels, patterns). Estimate the contrast ratio if possible (WCAG 2.1 requires 4.5:1 for normal text, 3:1 for large text). Note if italics are used for large blocks of text.
-- For **Text Readability**: Check font size, simplicity, whitespace, and whether content can be read within ~15 seconds. Note if long URLs appear without QR codes. Check for decorative/hard-to-read fonts.
-- For **Image Clarity**: Check if images are clear, appropriately sized, and not cluttered. Note if stock photos are used vs authentic images. Check for brand guideline compliance.
-- For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
-- If the sign appears to be **off, blank, or not displaying content**, note this clearly.
+- For **Contrast and Color Blindness**: Strictly evaluate contrast ratios. WCAG 2.1 requires 4.5:1 for normal text and 3:1 for large text — if contrast looks questionable, say so. Flag any red/green or blue/yellow color combinations used without alternative indicators. Note if italics are used for large blocks of text. Be skeptical — most signs do NOT meet WCAG contrast standards.
+- For **Text Readability**: Critically assess font size, simplicity, whitespace, and whether ALL content can be read within ~15 seconds from a reasonable distance. Flag long URLs without QR codes. Flag decorative/hard-to-read fonts. Flag text that is too small for the viewing distance. Flag overcrowded layouts.
+- For **Image Clarity**: Check if images are clear, appropriately sized, and not cluttered. Flag stock photos, low resolution, and excessive visual clutter. Be strict about brand guideline compliance and visual hierarchy.
+- For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, strictly assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
+- If the sign appears to be **off, blank, or not displaying content**, note this clearly and rate it as "Not Accessible."
 
 Also determine the following from the image:
 {ai_fields_instructions}- Any visible building or location identifiers
 - Any other relevant contextual details
 
-Based on your assessment, suggest an overall accessibility rating. Must be one of: {rating_options_str}
+Based on your assessment, suggest an overall accessibility rating. Be strict — most signs should NOT receive "Fully Accessible" or even "Mostly Accessible" unless they truly excel in every category. If any category has a notable issue, the overall rating should reflect that. Must be one of: {rating_options_str}
 
 Return your response as valid JSON matching this exact schema. Do NOT wrap it in markdown code fences.
 
@@ -278,7 +293,7 @@ def upload_to_drive(creds, image_b64, media_type, metadata, folder_id):
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseUpload
 
-    service = build('drive', 'v3', credentials=creds)
+    service = build('drive', 'v3', credentials=creds, cache_discovery=False)
 
     # Build filename
     building = metadata.get('building', 'unknown').replace(' ', '_')
@@ -317,7 +332,10 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
     """Append one row of assessment results to the Google Sheet."""
     import gspread
 
-    gc = gspread.authorize(creds)
+    # Decode service account JSON for gspread's native auth (avoids file_cache issues)
+    creds_b64 = os.environ.get('GOOGLE_SHEETS_CREDS', '')
+    creds_json = json.loads(base64.b64decode(creds_b64).decode('utf-8'))
+    gc = gspread.service_account_from_dict(creds_json)
     sheet = gc.open_by_key(sheet_id).sheet1
 
     config = load_config()
