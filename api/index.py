@@ -340,11 +340,16 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
 
     config = load_config()
 
-    # Build header row if sheet is empty
-    existing = sheet.get_all_values()
-    if not existing:
-        headers = build_header_row(config)
-        sheet.append_row(headers, value_input_option='USER_ENTERED')
+    # Ensure header row exists (check if first cell is "Timestamp")
+    headers = build_header_row(config)
+    try:
+        first_cell = sheet.cell(1, 1).value
+    except Exception:
+        first_cell = None
+
+    if first_cell != 'Timestamp':
+        # Insert header row at top
+        sheet.insert_row(headers, index=1, value_input_option='USER_ENTERED')
 
     # Build data row
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
@@ -386,10 +391,21 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
 
 def build_header_row(config):
     """Build the header row for the Google Sheet based on the config."""
+    # Use cleaner column names for readability
+    LABEL_OVERRIDES = {
+        'assessor_name': 'Assessor Name',
+        'evaluation_team': 'Evaluation Team',
+        'assessor_email': 'Email',
+        'building': 'Building',
+        'screen_location': 'Screen Location',
+        'reviewed_on': 'Date Reviewed',
+        'floor_owner': 'Floor Owner',
+    }
+
     headers = ['Timestamp']
 
     for field in config.get('metadata_fields', []):
-        headers.append(field['label'])
+        headers.append(LABEL_OVERRIDES.get(field['id'], field['label']))
 
     for field in config.get('ai_inferred_fields', []):
         headers.append(field['label'])
