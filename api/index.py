@@ -405,7 +405,6 @@ def build_header_row(config):
     # Use cleaner column names for readability
     LABEL_OVERRIDES = {
         'assessor_name': 'Assessor Name',
-        'evaluation_team': 'Evaluation Team',
         'assessor_email': 'Email',
         'building': 'Building',
         'screen_location': 'Screen Location',

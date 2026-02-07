@@ -58,12 +58,6 @@
       "required": true
     },
     {
-      "id": "evaluation_team",
-      "label": "Evaluation Team",
-      "type": "text",
-      "required": false
-    },  
-    {
       "id": "assessor_email",
       "label": "Email Address",
       "type": "email",
@@ -76,7 +70,7 @@
       "required": true,
       "options": [
         "Herman Brown Hall",
-        "COB (Continuing Studies Building)",
+        "Cambridge Office Building (COB)",
         "Allen Center",
         "O'Connor Engineering",
         "Maxfield Hall",
@@ -116,7 +110,7 @@
       "required": true,
       "options_map": {
         "Herman Brown Hall": ["Main Office Area", "Other"],
-        "COB (Continuing Studies Building)": ["Front Lobby", "2nd Floor Elevator Lobby", "3rd Floor Elevator Lobby", "4th Floor Elevator Lobby", "5th Floor Elevator Lobby", "6th Floor Elevator Lobby", "Other"],
+        "Cambridge Office Building (COB)": ["Front Lobby", "2nd Floor Elevator Lobby", "3rd Floor Elevator Lobby", "4th Floor Elevator Lobby", "5th Floor Elevator Lobby", "6th Floor Elevator Lobby", "Other"],
         "Allen Center": ["Front Lobby", "Other"],
         "O'Connor Engineering": ["Front Lobby", "Other"],
         "Maxfield Hall": ["Front Lobby", "Other"],
@@ -165,7 +159,7 @@
   ],
   "owner_map": {
     "Herman Brown Hall": "Lisa Geda",
-    "COB (Continuing Studies Building)": "Armi Cahoy - Lobby-4th, DAR 5&6",
+    "Cambridge Office Building (COB)": "Armi Cahoy - Lobby-4th, DAR 5&6",
     "Allen Center": "100% Public Affairs",
     "O'Connor Engineering": "100% Building Mgmt",
     "Maxfield Hall": "100% Statistics",
