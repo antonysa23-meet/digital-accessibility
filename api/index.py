@@ -340,7 +340,7 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
 
     config = load_config()
 
-    # Ensure header row exists (check if first cell is "Timestamp")
+    # Ensure header row exists — write it directly to row 1 if missing
     headers = build_header_row(config)
     try:
         first_cell = sheet.cell(1, 1).value
@@ -348,8 +348,8 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
         first_cell = None
 
     if first_cell != 'Timestamp':
-        # Insert header row at top
-        sheet.insert_row(headers, index=1, value_input_option='USER_ENTERED')
+        # Write header into row 1 (overwrites whatever is there)
+        sheet.update(range_name='A1', values=[headers], value_input_option='USER_ENTERED')
 
     # Build data row
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
