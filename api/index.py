@@ -139,6 +139,7 @@ def submit():
     inferred_metadata = data.get('inferred_metadata', {})
     accessibility_rating = data.get('accessibility_rating', '')
     final_comments = data.get('final_comments', '')
+    assessor_comments = data.get('assessor_comments', '')
     overall_notes = data.get('overall_notes', '')
     image_b64 = data.get('image', '')
     media_type = data.get('media_type', 'image/jpeg')
@@ -159,7 +160,8 @@ def submit():
 
         # Append to Google Sheet
         append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
-                        accessibility_rating, final_comments, overall_notes, image_link)
+                        accessibility_rating, final_comments, assessor_comments,
+                        overall_notes, image_link)
 
         return jsonify({'success': True})
 
@@ -328,7 +330,8 @@ def upload_to_drive(creds, image_b64, media_type, metadata, folder_id):
 
 
 def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
-                    accessibility_rating, final_comments, overall_notes, image_link):
+                    accessibility_rating, final_comments, assessor_comments,
+                    overall_notes, image_link):
     """Append one row of assessment results to the Google Sheet."""
     import gspread
 
@@ -356,8 +359,13 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
     row = [timestamp]
 
     # Metadata columns (user-entered + auto-populated like floor_owner)
+    # When "Other" is selected, substitute the user-typed specification
     for field in config.get('metadata_fields', []):
-        row.append(metadata.get(field['id'], ''))
+        value = metadata.get(field['id'], '')
+        other_value = metadata.get(f"{field['id']}_other", '')
+        if value == 'Other' and other_value:
+            value = f"Other: {other_value}"
+        row.append(value)
 
     # AI-inferred fields (sign_type, orientation, etc.)
     for field in config.get('ai_inferred_fields', []):
@@ -373,8 +381,11 @@ def append_to_sheet(creds, sheet_id, metadata, assessments, inferred_metadata,
     # Accessibility rating
     row.append(accessibility_rating)
 
-    # Final comments
+    # Final comments (AI)
     row.append(final_comments)
+
+    # Assessor comments (human)
+    row.append(assessor_comments)
 
     # Overall notes
     row.append(overall_notes)
@@ -416,7 +427,8 @@ def build_header_row(config):
         headers.append(category['name'])
 
     headers.append('Accessibility Rating')
-    headers.append('Final Comments')
+    headers.append('AI Additional Comments')
+    headers.append('Assessor Comments')
     headers.append('Overall Notes')
     headers.append('AI Additional Context')
 

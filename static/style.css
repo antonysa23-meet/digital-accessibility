@@ -555,6 +555,10 @@ main {
     box-shadow: 0 0 0 3px rgba(10, 80, 158, 0.15);
 }
 
+.other-specify {
+    margin-top: 0.5rem;
+}
+
 .auto-field {
     padding: 0.75rem;
     font-size: 0.9375rem;

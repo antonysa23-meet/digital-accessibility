@@ -101,6 +101,56 @@ function buildMetadataForm(fields) {
                 if (saved[field.id] === opt) option.selected = true;
                 input.appendChild(option);
             });
+
+            // Add "Other (specify)" text input if options include "Other"
+            if (field.options.includes('Other')) {
+                const otherInput = document.createElement('input');
+                otherInput.type = 'text';
+                otherInput.id = `field-${field.id}-other`;
+                otherInput.name = `${field.id}_other`;
+                otherInput.placeholder = `Specify ${field.label.toLowerCase()}...`;
+                otherInput.className = 'other-specify hidden';
+                if (saved[field.id] === 'Other' && saved[`${field.id}_other`]) {
+                    otherInput.value = saved[`${field.id}_other`];
+                    otherInput.classList.remove('hidden');
+                }
+                group.appendChild(input);
+                input.id = `field-${field.id}`;
+                input.name = field.id;
+                if (field.required) input.required = true;
+                group.appendChild(otherInput);
+
+                // Show/hide on change
+                input.addEventListener('change', () => {
+                    if (input.value === 'Other') {
+                        otherInput.classList.remove('hidden');
+                        otherInput.required = !!field.required;
+                        otherInput.focus();
+                    } else {
+                        otherInput.classList.add('hidden');
+                        otherInput.required = false;
+                        otherInput.value = '';
+                    }
+                });
+
+                // When "Other" building is selected, unlock the Floor Owner field
+                if (field.id === 'building') {
+                    input.addEventListener('change', () => {
+                        unlockFloorOwner(input.value === 'Other');
+                    });
+                    // Check on load
+                    if (saved[field.id] === 'Other') {
+                        setTimeout(() => unlockFloorOwner(true), 0);
+                    }
+                }
+
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'field-error';
+                errorMsg.textContent = `${field.label} is required`;
+                group.appendChild(errorMsg);
+                container.appendChild(group);
+                return; // Skip normal input setup below
+            }
         } else if (field.type === 'dependent_select') {
             input = document.createElement('select');
             input.disabled = true;
@@ -114,6 +164,17 @@ function buildMetadataForm(fields) {
             // Store the options map on the element for later use
             input.dataset.optionsMap = JSON.stringify(field.options_map);
             input.dataset.dependsOn = field.depends_on;
+
+            // Add "Other (specify)" text input
+            const otherInput = document.createElement('input');
+            otherInput.type = 'text';
+            otherInput.id = `field-${field.id}-other`;
+            otherInput.name = `${field.id}_other`;
+            otherInput.placeholder = `Describe the screen location...`;
+            otherInput.className = 'other-specify hidden';
+            if (saved[`${field.id}_other`]) {
+                otherInput.value = saved[`${field.id}_other`];
+            }
 
             // Wire up the parent dropdown to populate this one
             const parentId = `field-${field.depends_on}`;
@@ -130,6 +191,20 @@ function buildMetadataForm(fields) {
             };
             // Defer so the parent element exists in the DOM
             setTimeout(wireUp, 0);
+
+            // Set up input, other input, and error within group
+            input.id = `field-${field.id}`;
+            input.name = field.id;
+            if (field.required) input.required = true;
+            group.appendChild(input);
+            group.appendChild(otherInput);
+
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'field-error';
+            errorMsg.textContent = `${field.label} is required`;
+            group.appendChild(errorMsg);
+            container.appendChild(group);
+            return; // Skip normal input setup below
         } else if (field.type === 'auto') {
             // Auto-populated read-only field (e.g., floor_owner from owner_map)
             input = document.createElement('div');
@@ -190,6 +265,43 @@ function buildMetadataForm(fields) {
     });
 }
 
+// ===== Floor Owner Unlock =====
+function unlockFloorOwner(unlock) {
+    const autoField = document.getElementById('field-floor_owner');
+    if (!autoField) return;
+
+    const group = autoField.closest('.form-group');
+    if (!group) return;
+
+    if (unlock) {
+        // Replace the auto-field div with an editable text input
+        let editInput = document.getElementById('field-floor_owner-edit');
+        if (!editInput) {
+            editInput = document.createElement('input');
+            editInput.type = 'text';
+            editInput.id = 'field-floor_owner-edit';
+            editInput.name = 'floor_owner_manual';
+            editInput.placeholder = 'Enter owner / contact at this location...';
+            group.insertBefore(editInput, autoField.nextSibling);
+        }
+        autoField.classList.add('hidden');
+        editInput.classList.remove('hidden');
+        // Restore saved value if any
+        const saved = getSavedMetadata();
+        if (saved['floor_owner_manual']) {
+            editInput.value = saved['floor_owner_manual'];
+        }
+    } else {
+        // Restore the auto-field div, hide the edit input
+        autoField.classList.remove('hidden');
+        const editInput = document.getElementById('field-floor_owner-edit');
+        if (editInput) {
+            editInput.classList.add('hidden');
+            editInput.value = '';
+        }
+    }
+}
+
 // ===== Dependent Select Helper =====
 function populateDependentSelect(selectEl, optionsMap, parentValue, savedValue) {
     // Clear existing options
@@ -223,6 +335,28 @@ function populateDependentSelect(selectEl, optionsMap, parentValue, savedValue) 
     });
 
     selectEl.disabled = false;
+
+    // Show/hide "Other (specify)" text input for screen location
+    const otherInput = document.getElementById('field-screen_location-other');
+    if (otherInput) {
+        const showOther = () => {
+            if (selectEl.value === 'Other') {
+                otherInput.classList.remove('hidden');
+                otherInput.required = true;
+            } else {
+                otherInput.classList.add('hidden');
+                otherInput.required = false;
+                otherInput.value = '';
+            }
+        };
+        // Remove old listener by replacing with clone
+        const newSelect = selectEl;
+        newSelect.removeEventListener('change', newSelect._otherHandler);
+        newSelect._otherHandler = showOther;
+        newSelect.addEventListener('change', showOther);
+        // Check current state
+        showOther();
+    }
 }
 
 // ===== Step Navigation =====
@@ -483,7 +617,7 @@ function renderResults(data) {
         resultsContainer.appendChild(ratingCard);
     }
 
-    // Final comments
+    // Final comments (AI-generated)
     const commentsConfig = metadataConfig.final_comments;
     if (commentsConfig) {
         const commentsCard = document.createElement('div');
@@ -502,6 +636,28 @@ function renderResults(data) {
         commentsCard.appendChild(commentsArea);
 
         resultsContainer.appendChild(commentsCard);
+    }
+
+    // Assessor comments (blank — for the human assessor's own notes)
+    const assessorConfig = metadataConfig.assessor_comments;
+    if (assessorConfig) {
+        const assessorCard = document.createElement('div');
+        assessorCard.className = 'card';
+
+        const assessorHeading = document.createElement('h3');
+        assessorHeading.textContent = assessorConfig.label;
+        assessorCard.appendChild(assessorHeading);
+
+        const assessorArea = document.createElement('textarea');
+        assessorArea.id = 'assessor-comments';
+        assessorArea.className = 'assessment-textarea';
+        assessorArea.setAttribute('aria-label', assessorConfig.label);
+        assessorArea.placeholder = assessorConfig.placeholder || 'Add any additional notes...';
+        assessorArea.rows = 3;
+        assessorArea.value = '';
+        assessorCard.appendChild(assessorArea);
+
+        resultsContainer.appendChild(assessorCard);
     }
 
     // Hide the old overall notes card (replaced by inline elements above)
@@ -524,9 +680,13 @@ async function onSubmit() {
     const ratingEl = document.getElementById('overall-rating');
     const accessibilityRating = ratingEl ? ratingEl.value : '';
 
-    // Gather final comments
+    // Gather final comments (AI-generated, user-editable)
     const commentsEl = document.getElementById('final-comments');
     const finalComments = commentsEl ? commentsEl.value : '';
+
+    // Gather assessor comments (human-only)
+    const assessorEl = document.getElementById('assessor-comments');
+    const assessorComments = assessorEl ? assessorEl.value : '';
 
     // Gather metadata from form fields
     const metadata = {};
@@ -538,6 +698,12 @@ async function onSubmit() {
     document.querySelectorAll('#metadata-fields .auto-field[data-field-id]').forEach(el => {
         metadata[el.dataset.fieldId] = el.dataset.value || '';
     });
+
+    // Override floor_owner with manual input if "Other" building was selected
+    const floorOwnerEdit = document.getElementById('field-floor_owner-edit');
+    if (floorOwnerEdit && !floorOwnerEdit.classList.contains('hidden') && floorOwnerEdit.value) {
+        metadata['floor_owner'] = floorOwnerEdit.value;
+    }
 
     // Gather user-confirmed inferred fields (sign_type, orientation dropdowns)
     const confirmedInferred = { ...(assessmentData.inferred_metadata || {}) };
@@ -555,6 +721,7 @@ async function onSubmit() {
                 inferred_metadata: confirmedInferred,
                 accessibility_rating: accessibilityRating,
                 final_comments: finalComments,
+                assessor_comments: assessorComments,
                 overall_notes: assessmentData.overall_notes || '',
                 image: imageBase64,
                 media_type: imageMediaType
