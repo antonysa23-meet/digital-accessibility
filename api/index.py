@@ -299,12 +299,14 @@ def upload_to_drive(creds, image_b64, media_type, metadata, folder_id):
         body=file_metadata,
         media_body=media,
         fields='id, webViewLink',
+        supportsAllDrives=True,
     ).execute()
 
     # Make viewable by anyone with link
     service.permissions().create(
         fileId=file['id'],
         body={'type': 'anyone', 'role': 'reader'},
+        supportsAllDrives=True,
     ).execute()
 
     return file.get('webViewLink', '')
