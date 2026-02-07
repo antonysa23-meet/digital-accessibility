@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-to-step-2').addEventListener('click', () => goToStep(2));
     document.getElementById('submit-btn').addEventListener('click', onSubmit);
     document.getElementById('new-assessment-btn').addEventListener('click', resetForm);
+    document.getElementById('new-location-btn').addEventListener('click', resetToStep1);
     document.getElementById('dismiss-error').addEventListener('click', hideError);
 });
 
@@ -596,6 +597,28 @@ function resetForm() {
 
     // Go straight to photo step — metadata is still filled in
     goToStep(2);
+}
+
+function resetToStep1() {
+    // Clear photo and assessment state (metadata stays in sessionStorage)
+    imageBase64 = null;
+    imageMediaType = null;
+    assessmentData = null;
+
+    // Reset photo
+    document.getElementById('photo-input').value = '';
+    document.getElementById('preview-image').classList.add('hidden');
+    document.getElementById('preview-image').src = '';
+    document.getElementById('upload-placeholder').classList.remove('hidden');
+    document.getElementById('analyze-btn').disabled = true;
+
+    // Reset results
+    document.getElementById('assessment-results').innerHTML = '';
+    document.getElementById('inferred-metadata').classList.add('hidden');
+    document.getElementById('overall-notes-card').style.display = 'none';
+
+    // Go to step 1 — metadata form is still populated from sessionStorage
+    goToStep(1);
 }
 
 // ===== Error Handling =====
