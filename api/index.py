@@ -206,33 +206,39 @@ def build_assessment_prompt(config, metadata):
     rating_options = rating_config.get('options', [])
     rating_options_str = ', '.join(f'"{o}"' for o in rating_options)
 
-    prompt = f"""You are a fair, detail-oriented accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards. Your goal is to produce accurate, balanced assessments that identify real accessibility barriers while giving appropriate credit for things done well.
+    prompt = f"""You are a fair but thorough accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards. Your goal is to produce accurate, evidence-based assessments that identify real accessibility barriers while giving appropriate credit for things done well.
 
 IMPORTANT RATING PHILOSOPHY:
-- Be accurate and fair. Base assessments on what you can actually observe, not speculation.
-- Focus on issues that create real barriers for people with disabilities, not minor aesthetic preferences.
-- Give credit where it is due — if contrast is strong, say so. If text is large and readable, acknowledge it.
-- Do NOT speculate about contrast ratios failing when the visual evidence shows clear, legible text. White or light text on a dark background (dark blue, black, dark green) typically provides strong contrast. Only flag contrast as a concern when you can see text that genuinely blends into the background or is hard to distinguish.
-- Do NOT penalize signs for having a moderate amount of content if the text is well-organized and readable. Consider the sign's purpose: an informational lobby display is different from a quick-read wayfinding sign.
-- Do NOT flag subtle, low-opacity background design elements (watermarks, faint logos, background patterns) as "visual clutter" unless they genuinely interfere with reading the foreground text.
-- Do NOT flag the absence of photographs as a negative. Not all signs need images. Diagrams, charts, and text-only layouts are perfectly valid.
-- "Fully Accessible" is appropriate for signs that have strong contrast, readable text, clean layout, and no significant barriers.
-- "Mostly Accessible" is appropriate for signs that are generally good but have one or two minor concerns.
-- "Partially Accessible" is appropriate when there are clear, specific accessibility issues that would affect some users.
-- "Mostly Inaccessible" or "Fully Inaccessible" should be reserved for signs with severe, obvious barriers.
-- The rating should reflect the OVERALL accessibility experience, not be dragged down by nitpicks.
+- Be accurate and evidence-based. Assess what you can actually observe, not speculate about.
+- Give credit where due — if contrast is strong, say so. If headlines are large and clear, acknowledge it.
+- But also be honest about real problems — if body text or details (email addresses, URLs, fine print) appear small relative to likely viewing distance (6-12 feet in a lobby or hallway), flag it clearly.
+- Do NOT speculate about contrast ratios failing when the visual evidence shows clear, legible text. White or light text on a dark background (dark blue, black, dark green, dark teal) typically provides strong contrast. Only flag contrast when text genuinely blends into the background.
+- Do NOT flag subtle, low-opacity background design elements (watermarks, faint logos) as "visual clutter" unless they genuinely interfere with reading the foreground text.
+- Do NOT flag the absence of photographs as a negative. Diagrams, charts, and text-only layouts are perfectly valid.
+- DO flag these real accessibility issues when present:
+  * Text that is too small to read comfortably from typical viewing distance (6-12 feet)
+  * Dense, information-heavy layouts that pack too much content into a single slide — especially multi-step instructions, detailed bullet points, or lengthy paragraphs
+  * Email addresses, phone numbers, or contact info displayed in small text that would be hard to read or remember from a distance
+  * Signs that require multiple read-throughs to extract the key message
+  * Poor visual hierarchy where it's unclear what to read first
+  * Insufficient whitespace making text feel cramped
+- "Fully Accessible" should be reserved for signs that are genuinely simple, clear, and readable at a glance — large text, minimal content, strong contrast, clean layout with no notable barriers. Most informational signs with detailed content will NOT qualify.
+- "Mostly Accessible" is appropriate for signs that do most things well (good contrast, clear fonts) but have minor concerns like slightly dense content or one area of small text.
+- "Partially Accessible" is appropriate when there are multiple clear issues — such as a combination of dense text, small details, and information overload.
+- "Mostly Inaccessible" or "Fully Inaccessible" should be reserved for signs with severe barriers (very poor contrast, unreadable text, completely inaccessible design).
+- The overall rating should honestly reflect how accessible the sign is to someone with low vision, cognitive disabilities, or who is simply passing by quickly.
 {metadata_context}
 Analyze the attached photo of a digital sign and provide a detailed, balanced assessment for each category below.
 
 For each category, write a 2-4 sentence assessment paragraph that:
 - Describes what you observe on the sign relevant to that category
 - Identifies genuine accessibility concerns with specific evidence from the image
-- Gives credit for things done well (good contrast, clear fonts, clean layout, etc.)
+- Also acknowledges things done well — do not write purely negative assessments
 - Distinguishes between real accessibility barriers and minor design preferences
 
 Important assessment guidelines:
 - For **Contrast and Color Blindness**: Evaluate contrast based on what you can actually see. White or light-colored text on dark backgrounds (dark blue, black, dark green, dark teal) generally provides good to excellent contrast — acknowledge this when present rather than speculating it might fail WCAG ratios. Only flag contrast as insufficient when text is genuinely hard to read or distinguish from the background. WCAG 2.1 requires 4.5:1 for normal text and 3:1 for large text. Flag any red/green or blue/yellow color combinations used without alternative indicators. Note if italics are used for large blocks of text.
-- For **Text Readability**: Assess font size, simplicity, whitespace, and overall readability. Consider the sign's purpose — a detailed informational display viewed in a waiting area has different readability needs than a quick-glance wayfinding sign. Flag long URLs without QR codes. Flag decorative/hard-to-read fonts. Flag text that is genuinely too small for reasonable viewing distance. Flag layouts that are truly overcrowded to the point of being hard to parse.
+- For **Text Readability**: Critically assess whether ALL text on the sign — including the smallest text like contact info, fine print, and detailed instructions — can be read from 6-12 feet away. A sign can have great headlines but still fail readability if the body text, email addresses, or detailed instructions are too small. Flag signs that try to pack too much information into a single display. Flag multi-step instructions that would be hard to absorb quickly. Flag email addresses or contact details displayed in small text. Consider whether someone walking past could get the key message and act on it without stopping to squint. Acknowledge positives like QR codes, clear headlines, or logical organization.
 - For **Image Clarity**: Evaluate overall visual organization and clarity. If the sign uses no photographs, that is fine — evaluate the layout, graphics, and visual hierarchy on their own merits. Subtle background design elements (watermarks, faint logos) are acceptable if they don't interfere with readability. Flag genuine issues: truly cluttered layouts, images that obscure text, low resolution graphics, or confusing visual hierarchy.
 - For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
 - If the sign appears to be **off, blank, or not displaying content**, note this clearly and rate it as "Not Accessible."
@@ -241,7 +247,7 @@ Also determine the following from the image:
 {ai_fields_instructions}- Any visible building or location identifiers
 - Any other relevant contextual details
 
-Based on your assessment, suggest an overall accessibility rating that fairly reflects the sign's actual accessibility. A sign with good contrast, readable text, and clean organization should receive a positive rating even if it has minor imperfections. Must be one of: {rating_options_str}
+Based on your assessment, suggest an overall accessibility rating that fairly reflects the sign's actual accessibility. Be honest — acknowledge strengths but do not let good contrast or nice headlines override real concerns about text size, information density, or readability of details. Must be one of: {rating_options_str}
 
 Return your response as valid JSON matching this exact schema. Do NOT wrap it in markdown code fences.
 
