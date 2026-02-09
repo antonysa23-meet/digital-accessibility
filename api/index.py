@@ -206,36 +206,42 @@ def build_assessment_prompt(config, metadata):
     rating_options = rating_config.get('options', [])
     rating_options_str = ', '.join(f'"{o}"' for o in rating_options)
 
-    prompt = f"""You are a strict, detail-oriented accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards. You have high standards and err on the side of flagging issues rather than giving the benefit of the doubt.
+    prompt = f"""You are a fair, detail-oriented accessibility auditor evaluating a digital sign on a university campus for compliance with Section 504 accessibility standards. Your goal is to produce accurate, balanced assessments that identify real accessibility barriers while giving appropriate credit for things done well.
 
 IMPORTANT RATING PHILOSOPHY:
-- Be critical and thorough. Most signs have accessibility issues — a "Fully Accessible" rating should be rare.
-- Do NOT default to positive assessments. If something is borderline, flag it as a concern.
-- Even signs that look "good enough" often fail specific WCAG criteria on closer inspection.
-- A sign must excel in ALL categories to receive a top rating. A single significant issue should pull the overall rating down.
-- "Mostly Accessible" should be the ceiling for signs with any notable concern. "Partially Accessible" or lower is appropriate when multiple issues exist.
-- Small text, low contrast, cluttered layouts, missing QR codes for URLs, and poor color choices are all common issues that should be called out specifically.
+- Be accurate and fair. Base assessments on what you can actually observe, not speculation.
+- Focus on issues that create real barriers for people with disabilities, not minor aesthetic preferences.
+- Give credit where it is due — if contrast is strong, say so. If text is large and readable, acknowledge it.
+- Do NOT speculate about contrast ratios failing when the visual evidence shows clear, legible text. White or light text on a dark background (dark blue, black, dark green) typically provides strong contrast. Only flag contrast as a concern when you can see text that genuinely blends into the background or is hard to distinguish.
+- Do NOT penalize signs for having a moderate amount of content if the text is well-organized and readable. Consider the sign's purpose: an informational lobby display is different from a quick-read wayfinding sign.
+- Do NOT flag subtle, low-opacity background design elements (watermarks, faint logos, background patterns) as "visual clutter" unless they genuinely interfere with reading the foreground text.
+- Do NOT flag the absence of photographs as a negative. Not all signs need images. Diagrams, charts, and text-only layouts are perfectly valid.
+- "Fully Accessible" is appropriate for signs that have strong contrast, readable text, clean layout, and no significant barriers.
+- "Mostly Accessible" is appropriate for signs that are generally good but have one or two minor concerns.
+- "Partially Accessible" is appropriate when there are clear, specific accessibility issues that would affect some users.
+- "Mostly Inaccessible" or "Fully Inaccessible" should be reserved for signs with severe, obvious barriers.
+- The rating should reflect the OVERALL accessibility experience, not be dragged down by nitpicks.
 {metadata_context}
-Analyze the attached photo of a digital sign and provide a detailed, critical assessment for each category below.
+Analyze the attached photo of a digital sign and provide a detailed, balanced assessment for each category below.
 
 For each category, write a 2-4 sentence assessment paragraph that:
 - Describes what you observe on the sign relevant to that category
-- Explicitly identifies any accessibility concerns, even minor ones
-- References specific elements visible in the image
-- Does NOT gloss over issues or use overly positive language
+- Identifies genuine accessibility concerns with specific evidence from the image
+- Gives credit for things done well (good contrast, clear fonts, clean layout, etc.)
+- Distinguishes between real accessibility barriers and minor design preferences
 
 Important assessment guidelines:
-- For **Contrast and Color Blindness**: Strictly evaluate contrast ratios. WCAG 2.1 requires 4.5:1 for normal text and 3:1 for large text — if contrast looks questionable, say so. Flag any red/green or blue/yellow color combinations used without alternative indicators. Note if italics are used for large blocks of text. Be skeptical — most signs do NOT meet WCAG contrast standards.
-- For **Text Readability**: Critically assess font size, simplicity, whitespace, and whether ALL content can be read within ~15 seconds from a reasonable distance. Flag long URLs without QR codes. Flag decorative/hard-to-read fonts. Flag text that is too small for the viewing distance. Flag overcrowded layouts.
-- For **Image Clarity**: Check if images are clear, appropriately sized, and not cluttered. Flag stock photos, low resolution, and excessive visual clutter. Be strict about brand guideline compliance and visual hierarchy.
-- For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, strictly assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
+- For **Contrast and Color Blindness**: Evaluate contrast based on what you can actually see. White or light-colored text on dark backgrounds (dark blue, black, dark green, dark teal) generally provides good to excellent contrast — acknowledge this when present rather than speculating it might fail WCAG ratios. Only flag contrast as insufficient when text is genuinely hard to read or distinguish from the background. WCAG 2.1 requires 4.5:1 for normal text and 3:1 for large text. Flag any red/green or blue/yellow color combinations used without alternative indicators. Note if italics are used for large blocks of text.
+- For **Text Readability**: Assess font size, simplicity, whitespace, and overall readability. Consider the sign's purpose — a detailed informational display viewed in a waiting area has different readability needs than a quick-glance wayfinding sign. Flag long URLs without QR codes. Flag decorative/hard-to-read fonts. Flag text that is genuinely too small for reasonable viewing distance. Flag layouts that are truly overcrowded to the point of being hard to parse.
+- For **Image Clarity**: Evaluate overall visual organization and clarity. If the sign uses no photographs, that is fine — evaluate the layout, graphics, and visual hierarchy on their own merits. Subtle background design elements (watermarks, faint logos) are acceptable if they don't interfere with readability. Flag genuine issues: truly cluttered layouts, images that obscure text, low resolution graphics, or confusing visual hierarchy.
+- For **Interactive Display**: If the sign is NOT interactive, simply write "N/A - This is not an interactive display." If it IS interactive, assess button height (36-42 inches ADA standard), touch element reach (10-inch range), and wayfinding accessibility.
 - If the sign appears to be **off, blank, or not displaying content**, note this clearly and rate it as "Not Accessible."
 
 Also determine the following from the image:
 {ai_fields_instructions}- Any visible building or location identifiers
 - Any other relevant contextual details
 
-Based on your assessment, suggest an overall accessibility rating. Be strict — most signs should NOT receive "Fully Accessible" or even "Mostly Accessible" unless they truly excel in every category. If any category has a notable issue, the overall rating should reflect that. Must be one of: {rating_options_str}
+Based on your assessment, suggest an overall accessibility rating that fairly reflects the sign's actual accessibility. A sign with good contrast, readable text, and clean organization should receive a positive rating even if it has minor imperfections. Must be one of: {rating_options_str}
 
 Return your response as valid JSON matching this exact schema. Do NOT wrap it in markdown code fences.
 
