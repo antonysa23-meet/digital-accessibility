@@ -444,8 +444,3 @@ def build_header_row(config):
     headers.append('AI Additional Context')
 
     return headers
-
-
-# ===== Local Dev =====
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)

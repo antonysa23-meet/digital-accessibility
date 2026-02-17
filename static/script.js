@@ -4,6 +4,7 @@ let imageBase64 = null;
 let imageMediaType = null;
 let assessmentData = null;
 let metadataConfig = null;
+let isOptOut = false;
 
 // ===== DOM References =====
 const steps = {
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     document.getElementById('analyze-btn').addEventListener('click', onAnalyze);
+    document.getElementById('optout-btn').addEventListener('click', onOptOut);
     document.getElementById('back-to-step-1').addEventListener('click', () => goToStep(1));
     document.getElementById('back-to-step-2').addEventListener('click', () => goToStep(2));
     document.getElementById('submit-btn').addEventListener('click', onSubmit);
@@ -664,9 +666,182 @@ function renderResults(data) {
     document.getElementById('overall-notes-card').style.display = 'none';
 }
 
+// ===== Opt Out =====
+function onOptOut() {
+    isOptOut = true;
+    renderOptOutReview();
+    goToStep(3);
+}
+
+function renderOptOutReview() {
+    document.getElementById('overall-notes-card').style.display = 'none';
+
+    // Show AI-inferred fields section but pre-fill with "Opted out" (read-only)
+    const inferredDiv = document.getElementById('inferred-fields');
+    inferredDiv.innerHTML = '';
+    const aiFields = metadataConfig.ai_inferred_fields || [];
+
+    if (aiFields.length > 0) {
+        aiFields.forEach(field => {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+
+            const label = document.createElement('label');
+            label.textContent = field.label;
+            group.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = 'Opted out';
+            input.readOnly = true;
+            input.style.opacity = '0.6';
+            group.appendChild(input);
+
+            inferredDiv.appendChild(group);
+        });
+        document.getElementById('inferred-metadata').classList.remove('hidden');
+    } else {
+        document.getElementById('inferred-metadata').classList.add('hidden');
+    }
+
+    const resultsContainer = document.getElementById('assessment-results');
+    resultsContainer.innerHTML = '';
+
+    // Category fields — pre-filled "Opted out", read-only
+    if (metadataConfig && metadataConfig.categories) {
+        metadataConfig.categories.forEach(category => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const heading = document.createElement('h3');
+            heading.textContent = category.name;
+            card.appendChild(heading);
+
+            const textarea = document.createElement('textarea');
+            textarea.className = 'assessment-textarea';
+            textarea.dataset.categoryId = category.id;
+            textarea.setAttribute('aria-label', `Assessment for: ${category.name}`);
+            textarea.rows = 2;
+            textarea.value = 'Opted out';
+            textarea.readOnly = true;
+            textarea.style.opacity = '0.6';
+            card.appendChild(textarea);
+
+            resultsContainer.appendChild(card);
+        });
+    }
+
+    // Overall accessibility rating — pre-set to "N/A - No Active Displays"
+    const ratingConfig = metadataConfig && metadataConfig.overall_rating;
+    if (ratingConfig) {
+        const ratingCard = document.createElement('div');
+        ratingCard.className = 'card';
+
+        const ratingHeading = document.createElement('h3');
+        ratingHeading.textContent = ratingConfig.label;
+        ratingCard.appendChild(ratingHeading);
+
+        const ratingSelect = document.createElement('select');
+        ratingSelect.id = 'overall-rating';
+        ratingSelect.setAttribute('aria-label', ratingConfig.label);
+
+        ratingConfig.options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            if (opt === 'N/A - No Active Displays') option.selected = true;
+            ratingSelect.appendChild(option);
+        });
+
+        ratingCard.appendChild(ratingSelect);
+        resultsContainer.appendChild(ratingCard);
+    }
+
+    // Overall Summary (final_comments) — blank, REQUIRED
+    const commentsConfig = metadataConfig && metadataConfig.final_comments;
+    if (commentsConfig) {
+        const commentsCard = document.createElement('div');
+        commentsCard.className = 'card';
+
+        const commentsHeading = document.createElement('h3');
+        commentsHeading.textContent = 'Overall Summary';
+        commentsCard.appendChild(commentsHeading);
+
+        const req = document.createElement('span');
+        req.className = 'required';
+        req.textContent = ' *';
+        commentsHeading.appendChild(req);
+
+        const commentsArea = document.createElement('textarea');
+        commentsArea.id = 'final-comments';
+        commentsArea.className = 'assessment-textarea';
+        commentsArea.setAttribute('aria-label', 'Overall Summary');
+        commentsArea.rows = 3;
+        commentsArea.placeholder = 'Provide a brief summary of why this display could not be assessed...';
+        commentsArea.value = '';
+        commentsCard.appendChild(commentsArea);
+
+        resultsContainer.appendChild(commentsCard);
+    }
+
+    // Assessor's Notes (assessor_comments) — blank, REQUIRED
+    const assessorConfig = metadataConfig && metadataConfig.assessor_comments;
+    if (assessorConfig) {
+        const assessorCard = document.createElement('div');
+        assessorCard.className = 'card';
+
+        const assessorHeading = document.createElement('h3');
+        assessorHeading.textContent = "Assessor's Notes";
+        assessorCard.appendChild(assessorHeading);
+
+        const req = document.createElement('span');
+        req.className = 'required';
+        req.textContent = ' *';
+        assessorHeading.appendChild(req);
+
+        const assessorArea = document.createElement('textarea');
+        assessorArea.id = 'assessor-comments';
+        assessorArea.className = 'assessment-textarea';
+        assessorArea.setAttribute('aria-label', "Assessor's Notes");
+        assessorArea.rows = 3;
+        assessorArea.placeholder = 'Required: Describe why this display was not assessed (e.g. screen was off, no display present, showing video content)...';
+        assessorArea.value = '';
+        assessorCard.appendChild(assessorArea);
+
+        resultsContainer.appendChild(assessorCard);
+    }
+}
+
 // ===== Submit =====
 async function onSubmit() {
     const submitBtn = document.getElementById('submit-btn');
+
+    // If opt-out: validate required fields before proceeding
+    if (isOptOut) {
+        const commentsEl = document.getElementById('final-comments');
+        const assessorEl = document.getElementById('assessor-comments');
+        let valid = true;
+
+        if (!commentsEl || !commentsEl.value.trim()) {
+            if (commentsEl) commentsEl.classList.add('invalid');
+            valid = false;
+        } else {
+            commentsEl.classList.remove('invalid');
+        }
+
+        if (!assessorEl || !assessorEl.value.trim()) {
+            if (assessorEl) assessorEl.classList.add('invalid');
+            valid = false;
+        } else {
+            assessorEl.classList.remove('invalid');
+        }
+
+        if (!valid) {
+            showError('Please fill in both required fields: Overall Summary and Assessor\'s Notes.');
+            return;
+        }
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting...';
 
@@ -680,7 +855,7 @@ async function onSubmit() {
     const ratingEl = document.getElementById('overall-rating');
     const accessibilityRating = ratingEl ? ratingEl.value : '';
 
-    // Gather final comments (AI-generated, user-editable)
+    // Gather final comments (AI-generated or user-entered for opt-out)
     const commentsEl = document.getElementById('final-comments');
     const finalComments = commentsEl ? commentsEl.value : '';
 
@@ -706,7 +881,8 @@ async function onSubmit() {
     }
 
     // Gather user-confirmed inferred fields (sign_type, orientation dropdowns)
-    const confirmedInferred = { ...(assessmentData.inferred_metadata || {}) };
+    // For opt-out, assessmentData is null so skip this step
+    const confirmedInferred = isOptOut ? {} : { ...(assessmentData.inferred_metadata || {}) };
     document.querySelectorAll('#inferred-fields select[data-inferred-id]').forEach(select => {
         confirmedInferred[select.dataset.inferredId] = select.value;
     });
@@ -722,9 +898,9 @@ async function onSubmit() {
                 accessibility_rating: accessibilityRating,
                 final_comments: finalComments,
                 assessor_comments: assessorComments,
-                overall_notes: assessmentData.overall_notes || '',
-                image: imageBase64,
-                media_type: imageMediaType
+                overall_notes: isOptOut ? '' : (assessmentData.overall_notes || ''),
+                image: isOptOut ? null : imageBase64,
+                media_type: isOptOut ? null : imageMediaType
             })
         });
 
@@ -748,6 +924,7 @@ function resetForm() {
     imageBase64 = null;
     imageMediaType = null;
     assessmentData = null;
+    isOptOut = false;
 
     // Reset photo
     document.getElementById('photo-input').value = '';

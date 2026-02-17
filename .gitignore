@@ -20,11 +20,6 @@ nul
 
 # Temp files
 *.tmp
-cUsersantonAppDataLocalTempconfig_test.json
 
-# Reference files (saved web pages)
-Creating Accessible Communications _ Digital Accessibility _ Rice University.html
-Creating Accessible Communications _ Digital Accessibility _ Rice University_files/
-
-# Unused
-main.py
+# Old / unused files
+OldFiles/
